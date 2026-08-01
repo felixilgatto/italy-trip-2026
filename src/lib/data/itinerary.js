@@ -82,14 +82,14 @@ export function animationSecondsAt(speed) {
  * Returns the marker coordinates, the emoji to display, and the simulated date.
  */
 export function resolveAt(frac) {
-	const offset = (((frac % 1) + 1) % 1) * totalMs;
+	const offset = frac >= 1 ? totalMs : (((frac % 1) + 1) % 1) * totalMs;
 
 	let acc = 0;
 	let leg = legs[0];
 	let legIndex = 0;
 	for (let i = 0; i < legs.length; i++) {
 		const l = legs[i];
-		if (offset < acc + (l.end - l.start)) {
+		if (offset <= acc + (l.end - l.start)) {
 			leg = l;
 			legIndex = i;
 			break;

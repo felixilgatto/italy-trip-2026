@@ -90,7 +90,7 @@
 
 		const start = resolveAt(0);
 		simText = formatSim(start.date);
-		rafId = requestAnimationFrame(tick);
+		startLoop();
 
 		const focus = Number(page.url.searchParams.get('focus'));
 		if (focus && photos.some((p) => p.id === focus)) {
@@ -152,14 +152,22 @@
 		simText = formatSim(date);
 	}
 
+	function startLoop() {
+		if (rafId || !map || !travelMarker) return;
+		lastNow = 0;
+		rafId = requestAnimationFrame(tick);
+	}
+
+	function stopLoop() {
+		if (rafId) {
+			cancelAnimationFrame(rafId);
+			rafId = null;
+		}
+	}
+
 	function tick(now) {
 		if (!map || !travelMarker) return;
 		if (!lastNow) lastNow = now;
-		if (paused || dragging) {
-			lastNow = now;
-			rafId = requestAnimationFrame(tick);
-			return;
-		}
 		const dt = Math.min((now - lastNow) / 1000, 0.1);
 		lastNow = now;
 		frac = (frac + dt / animationSecondsAt(speed)) % 1;
@@ -176,6 +184,7 @@
 
 	function onTrackDown(e) {
 		dragging = true;
+		stopLoop();
 		trackEl.setPointerCapture(e.pointerId);
 		scrubAt(e.clientX);
 	}
@@ -186,6 +195,7 @@
 
 	function onTrackUp() {
 		dragging = false;
+		startLoop();
 	}
 
 	function onTrackKey(e) {
@@ -211,6 +221,8 @@
 
 	function togglePause() {
 		paused = !paused;
+		if (paused) stopLoop();
+		else startLoop();
 	}
 
 	function jumpToDay(i) {
