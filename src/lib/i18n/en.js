@@ -1,0 +1,49 @@
+export default {
+	nav: { home: 'Map', photos: 'Photos', upload: 'Add photos' },
+	title: 'Italy 2026',
+	subtitle: 'A backpacking trip across Italy — follow the route and the photos.',
+	map: { stops: 'Stops', photos: 'Photos', route: 'Route', lang: 'Lang' },
+	stop: { transport: 'Transport', stay: 'Stay' },
+	photos: {
+		title: 'Photos',
+		empty: 'No photos yet — go to "Add photos" to post your first ones.',
+		delete: 'Delete',
+		deleteConfirm: 'Delete this photo?',
+		deleted: 'Photo deleted'
+	},
+	photo: {
+		back: 'Back to gallery',
+		download: 'Download',
+		edit: 'Edit caption',
+		save: 'Save',
+		saved: 'Caption saved',
+		delete: 'Delete photo',
+		notFound: 'Photo not found',
+		onMap: 'Open on the map'
+	},
+	upload: {
+		title: 'Add photos',
+		loginTitle: 'Private area',
+		password: 'Password',
+		login: 'Log in',
+		loginOk: 'Logged in',
+		wrongPassword: 'Wrong password',
+		logout: 'Log out',
+		addPhoto: 'Add photos',
+		selectFile: 'Choose photos…',
+		captionEn: 'Caption (EN)',
+		captionFr: 'Légende (FR)',
+		geoDetected: 'GPS found in the photos — adjust the marker if needed.',
+		geoMissing: 'No GPS in these photos — place the marker on the map.',
+		clickToPlace: 'Click on the map to place the marker, or drag it.',
+		dragMarker: 'Drag the marker to the location',
+		selectedCount: '{n} photos selected',
+		remove: 'Remove',
+		submit: 'Upload all',
+		uploading: 'Uploading…',
+		success: 'Photos added!',
+		error: 'Something went wrong',
+		partial: 'Only {ok} of {total} uploaded',
+		unauthorized: 'Unauthorized'
+	}
+};

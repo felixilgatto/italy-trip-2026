@@ -1,0 +1,12 @@
+State,Date,Étape / Action,Mode de Transport,Durée / Descriptif,Prix Estimé,Ton Prix Réel,Note / Alerte
+OK,jeudi 13 ,Paris ➔ Milan,TGV Direct,Gare de Lyon 06:46 ➔ Milano Porta Garibaldi 13:53,50 € - 110 €,"76,00 €",VALIDER AV. 20 JUILLET
+OK,jeudi 13 - dimanche 16 ,Logement Milan (3 nuits),Auberge de jeunesse,Bed in 8 Bed Mixed Dorm - Ostello Bello Milano Duomo,120 € - 150 €,"111,61 €",Ambiance Navigli / Ferragosto
+OK,dimanche 16 - lundi 17,Milan ➔ Naples,Train de nuit,Milano Porta Garibaldi 20:53 ➔ Napoli Centrale (17/08) 08:46,50 € - 90 €,"60,90 €",Trenitalia
+OK,lundi 17 - mercredi 19 ,Logement Naples (2 nuits),Auberge de jeunesse,Centre historique / Rando,70 € - 90 €,"92,88 €",
+OK,mercredi 19 - jeudi 20,Naples ➔ Palerme,Ferry de nuit,"Naples, Piazzale Molo Pisacane, 1 20:00 ➔ Palerme (20/08) 07:00",40 € - 80 €,"46,00 €",À réserver rapidement
+OK,jeudi 20 - vendredi 28 ,Logement Palerme (8 nuits),Auberge de jeunesse,Bed in 6 Bed Mixed Dorm - Ostello Bello Palermo,280 € - 360 €,"471,37 €",Du rab de Sicile !
+OK,vendredi 28 - samedi 29,Palerme ➔ Milan,Train de nuit,Palermo Centrale 12:53 ➔ Milano Centrale (29/08) 11:55,60 € - 110 €,"119,00 €",Trenitalia - Expérience train sur le ferry
+OK,samedi 29 - dimanche 30 ,Logement Milan (1 nuit),Auberge de jeunesse,Bed in 6 Bed Mixed Dorm - Ostello Bello Grande Milan Central Station,40 € - 50 €,"47,20 €",Repos post-trajet
+OK,dimanche 30 août,Milan ➔ Paris,TGV Direct,Milano Porta Garibaldi 06:00 ➔ Gare de Lyon 13:18,70 € - 130 €,"104,00 €",VALIDER AV. 20 JUILLET
+,Dépenses,Sur place,Budget quotidien,"Street food (pizzas, arancini), sorties, entrées",~300 €,,Très abordable dans le Sud
+,TOTAL,,,Somme de tes billets verrouillés,,"1 128,96 €",(Hors auberges & sur place)
