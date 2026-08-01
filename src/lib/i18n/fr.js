@@ -35,6 +35,8 @@ export default {
 		captionFr: 'Légende (FR)',
 		geoDetected: 'GPS trouvé dans les photos — ajuste le marqueur si besoin.',
 		geoMissing: 'Pas de GPS dans ces photos — place le marqueur sur la carte.',
+		geoBusy: 'Localisation des photos en cours…',
+		geoManual: 'GPS trouvé, mais tu as déjà placé le marqueur — sa position est conservée.',
 		clickToPlace: 'Clique sur la carte pour placer le marqueur, ou déplace-le.',
 		dragMarker: 'Déplace le marqueur sur la carte',
 		selectedCount: '{n} photos sélectionnées',
