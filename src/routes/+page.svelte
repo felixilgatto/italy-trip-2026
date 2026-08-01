@@ -386,6 +386,25 @@
 		margin-bottom: 6px;
 	}
 
+	@media (max-width: 640px) {
+		.panel {
+			left: 12px;
+			right: 12px;
+			top: 12px;
+			max-width: none;
+		}
+
+		.reopen {
+			left: 12px;
+			top: 12px;
+		}
+
+		:global(.pp img) {
+			max-width: 82vw;
+			width: auto;
+		}
+	}
+
 	:global(.pc) {
 		font-family: 'Caveat', cursive;
 		font-weight: 500;
