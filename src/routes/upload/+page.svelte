@@ -9,12 +9,14 @@
 	let loginError = $state('');
 	let logginIn = $state(false);
 
+	const MAX_FILE_MB = 25;
+	const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
+
 	let files = $state([]);
 	let batchLat = $state(null);
 	let batchLng = $state(null);
 	let geoMsg = $state('');
-	let geoBusy = $state(false);
-	let manualLoc = $state(false);
+	let locating = $state(false);
 	let uploading = $state(false);
 	let uploadMsg = $state('');
 	let uploadErr = $state('');
@@ -65,11 +67,37 @@
 		});
 	}
 
-	function setCoords({ lat, lng }, manual = true) {
+	function setCoords({ lat, lng }) {
 		batchLat = lat;
 		batchLng = lng;
 		geoMsg = '';
-		if (manual) manualLoc = true;
+	}
+
+	function useLocation() {
+		if (!map || !marker) return;
+		if (!navigator.geolocation) {
+			geoMsg = $dict.upload.locateUnavailable;
+			return;
+		}
+		locating = true;
+		geoMsg = $dict.upload.locating;
+		navigator.geolocation.getCurrentPosition(
+			(pos) => {
+				locating = false;
+				const { latitude, longitude } = pos.coords;
+				marker.setLatLng([latitude, longitude]);
+				map.setView([latitude, longitude], 14);
+				setCoords({ lat: latitude, lng: longitude }, true);
+				geoMsg = $dict.upload.locateFound;
+			},
+			(err) => {
+				locating = false;
+				if (err.code === err.PERMISSION_DENIED) geoMsg = $dict.upload.locateDenied;
+				else if (err.code === err.TIMEOUT) geoMsg = $dict.upload.locateTimeout;
+				else geoMsg = $dict.upload.locateUnavailable;
+			},
+			{ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+		);
 	}
 
 	async function login() {
@@ -104,20 +132,44 @@
 		if (!selected.length) return;
 		uploadMsg = '';
 		uploadErr = '';
+
+		const tooBig = selected.filter((f) => f.size > MAX_FILE_BYTES);
+		const notImage = selected.filter(
+			(f) => f.size <= MAX_FILE_BYTES && f.type && !f.type.startsWith('image/')
+		);
+		const accepted = selected.filter(
+			(f) => f.size <= MAX_FILE_BYTES && (!f.type || f.type.startsWith('image/'))
+		);
+
+		const skips = [];
+		if (tooBig.length) {
+			skips.push(
+				$dict.upload.tooLarge
+					.replace('{n}', String(tooBig.length))
+					.replace('{mb}', String(MAX_FILE_MB))
+			);
+		}
+		if (notImage.length) {
+			skips.push($dict.upload.notImage.replace('{n}', String(notImage.length)));
+		}
+		if (skips.length) uploadErr = skips.join(' ');
+
+		if (!accepted.length) {
+			if (fileInput) fileInput.value = '';
+			return;
+		}
+
 		batchLat = null;
 		batchLng = null;
-		geoBusy = true;
-		geoMsg = $dict.upload.geoBusy;
 
 		const added = [];
-		for (const file of selected) {
+		for (const file of accepted) {
 			added.push({
 				file,
 				url: URL.createObjectURL(file),
 				caption_en: '',
 				caption_fr: '',
-				taken_at: '',
-				geo: null
+				taken_at: ''
 			});
 		}
 		files = [...files, ...added];
@@ -125,42 +177,19 @@
 		const parsed = await Promise.all(
 			added.map(async (entry) => {
 				try {
-					const [gps, meta] = await Promise.all([
-						exifr.gps(entry.file),
-						exifr.parse(entry.file, ['DateTimeOriginal']).catch(() => null)
-					]);
-					return {
-						geo:
-							gps && typeof gps.latitude === 'number' && typeof gps.longitude === 'number'
-								? { lat: gps.latitude, lng: gps.longitude }
-								: null,
-						taken_at: meta?.DateTimeOriginal || ''
-					};
+					const meta = await exifr
+						.parse(entry.file, ['DateTimeOriginal'])
+						.catch(() => null);
+					return { taken_at: meta?.DateTimeOriginal || '' };
 				} catch {
-					return { geo: null, taken_at: '' };
+					return { taken_at: '' };
 				}
 			})
 		);
 
 		parsed.forEach((r, i) => {
-			added[i].geo = r.geo;
 			if (r.taken_at) added[i].taken_at = r.taken_at;
 		});
-
-		const gpsFound = parsed.find((r) => r.geo)?.geo || null;
-
-		geoBusy = false;
-
-		if (gpsFound && !manualLoc) {
-			marker?.setLatLng([gpsFound.lat, gpsFound.lng]);
-			map?.setView([gpsFound.lat, gpsFound.lng], 12);
-			setCoords(gpsFound, false);
-			geoMsg = $dict.upload.geoDetected;
-		} else if (gpsFound) {
-			geoMsg = $dict.upload.geoManual;
-		} else {
-			geoMsg = $dict.upload.geoMissing;
-		}
 	}
 
 	function removeFile(i) {
@@ -175,10 +204,6 @@
 
 	async function submit() {
 		if (!files.length) return;
-		if (geoBusy) {
-			uploadErr = $dict.upload.geoBusy;
-			return;
-		}
 		if (batchLat === null || batchLng === null) {
 			uploadErr = $dict.upload.geoMissing;
 			return;
@@ -198,10 +223,18 @@
 					fd.append('caption_fr', entry.caption_fr);
 					fd.append('taken_at', entry.taken_at);
 					const res = await fetch('/api/photos', { method: 'POST', body: fd });
-					return res.ok;
+					if (res.ok) return { ok: true, code: '' };
+					let code = '';
+					try {
+						const data = await res.json();
+						code = data.message || '';
+					} catch {
+						// non-JSON error body
+					}
+					return { ok: false, code };
 				})
 			);
-			const ok = results.filter(Boolean).length;
+			const ok = results.filter((r) => r.ok).length;
 			if (ok === total) {
 				uploadMsg = $dict.upload.success;
 				for (const entry of files) URL.revokeObjectURL(entry.url);
@@ -209,14 +242,20 @@
 				batchLat = null;
 				batchLng = null;
 				geoMsg = '';
-				if (fileInput) fileInput.value = '';
-				if (marker) marker.setLatLng([41.0, 13.5]);
-				if (map) map.setView([41.0, 13.5], 6);
+			if (fileInput) fileInput.value = '';
+			if (marker) marker.setLatLng([41.0, 13.5]);
+			if (map) map.setView([41.0, 13.5], 6);
 			} else {
-				files = files.filter((_, i) => !results[i]);
-				uploadErr = $dict.upload.partial
-					.replace('{ok}', String(ok))
-					.replace('{total}', String(total));
+				const failed = results.find((r) => !r.ok);
+				const msg = failed?.code || '';
+				if (/too large|file size|25 ?mb/i.test(msg)) {
+					uploadErr = $dict.upload.uploadTooLarge.replace('{mb}', String(MAX_FILE_MB));
+				} else {
+					uploadErr = $dict.upload.partial
+						.replace('{ok}', String(ok))
+						.replace('{total}', String(total));
+				}
+				files = files.filter((_, i) => !results[i].ok);
 			}
 		} catch {
 			uploadErr = $dict.upload.error;
@@ -268,6 +307,10 @@
 
 		<div class="map-wrap">
 			<div id="upload-map"></div>
+			<button class="loc-btn" onclick={useLocation} disabled={locating}>
+				<span class="loc-pin">📍</span>
+				{locating ? $dict.upload.locating : $dict.upload.locate}
+			</button>
 			{#if geoMsg}
 				<p class="hint">
 					{geoMsg}
@@ -300,7 +343,7 @@
 
 		{#if uploadMsg}<p class="ok">{uploadMsg}</p>{/if}
 		{#if uploadErr}<p class="err">{uploadErr}</p>{/if}
-		<button onclick={submit} disabled={uploading || !files.length || geoBusy}>
+		<button onclick={submit} disabled={uploading || !files.length}>
 			{uploading ? $dict.upload.uploading : $dict.upload.submit}
 		</button>
 	</section>
@@ -423,6 +466,38 @@
 	#upload-map {
 		height: 100%;
 		width: 100%;
+	}
+
+	.loc-btn {
+		position: absolute;
+		top: 10px;
+		right: 10px;
+		z-index: 1000;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 7px 12px;
+		font-size: 0.85rem;
+		background: #fffdf6;
+		border: 2px solid #a08d6e;
+		border-radius: 8px;
+		box-shadow: 0 2px 8px rgba(80, 62, 30, 0.3);
+		color: #3b3126;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.loc-btn:hover:not(:disabled) {
+		background: #f3e9d0;
+	}
+
+	.loc-btn:disabled {
+		opacity: 0.6;
+		cursor: default;
+	}
+
+	.loc-pin {
+		line-height: 1;
 	}
 
 	.hint {

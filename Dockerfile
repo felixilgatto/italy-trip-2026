@@ -15,7 +15,8 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     HOST=0.0.0.0 \
-    DATA_DIR=/data
+    DATA_DIR=/data \
+    BODY_SIZE_LIMIT=30M
 COPY --from=build /app/build build
 COPY --from=build /app/node_modules node_modules
 COPY --from=build /app/package.json package.json
