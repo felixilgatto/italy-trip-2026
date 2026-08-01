@@ -1,12 +1,22 @@
 export default {
 	nav: { home: 'Map', photos: 'Photos', upload: 'Add photos' },
 	title: 'Italy 2026',
-	subtitle: 'A backpacking trip across Italy — follow the route and the photos.',
-	map: { stops: 'Stops', photos: 'Photos', route: 'Route', lang: 'Lang' },
+	subtitle: 'Hi, I’m Felix! This is my backpacking trip across Italy — follow the route and the photos.',
+	map: {
+		stops: 'Stops',
+		photos: 'Photos',
+		route: 'Route',
+		lang: 'Lang',
+		speed: 'Speed',
+		pause: 'Pause',
+		resume: 'Resume',
+		journey: 'Journey steps',
+		stay: 'Stay'
+	},
 	stop: { transport: 'Transport', stay: 'Stay' },
 	photos: {
 		title: 'Photos',
-		empty: 'No photos yet — go to "Add photos" to post your first ones.',
+		empty: 'No photos yet — come back soon, the trip is just starting!',
 		delete: 'Delete',
 		deleteConfirm: 'Delete this photo?',
 		deleted: 'Photo deleted'
@@ -19,7 +29,8 @@ export default {
 		saved: 'Caption saved',
 		delete: 'Delete photo',
 		notFound: 'Photo not found',
-		onMap: 'Open on the map'
+		onMap: 'Open on map',
+		zoom: 'Fullscreen'
 	},
 	upload: {
 		title: 'Add photos',

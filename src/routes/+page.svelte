@@ -4,29 +4,46 @@
 	import { stops, route } from '$lib/data/stops.js';
 	import { lang, dict } from '$lib/i18n/index.js';
 	import { page } from '$app/state';
+	import {
+		resolveAt,
+		animationSecondsAt,
+		DEFAULT_SPEED,
+		SPEED_OPTIONS,
+		totalMs,
+		startMs
+	} from '$lib/data/itinerary.js';
+
+	const DAY_MS = 86400000;
+	const dayCount = Math.max(1, Math.ceil(totalMs / DAY_MS));
+	const dayIndices = Array.from({ length: dayCount });
 
 	let L;
 	let map;
 	let layerGroup;
 	let photoMarkers = [];
 	let travelMarker;
-	let travelIcons;
+	let iconCache = {};
 	let rafId;
-	let curSeg = -1;
+	let curIcon;
 	let frac = 0;
 	let lastNow = 0;
-	const SPEED_PX = 55;
 	let photos = $state([]);
 	let loading = $state(true);
 	let panelOpen = $state(true);
+	let speed = $state(DEFAULT_SPEED);
+	let simText = $state('');
+	let dayIndex = $state(0);
+	let progPct = $state(0);
+	let paused = $state(false);
+	let dragging = false;
+	let trackEl;
 
-	const orderedStops = [stops[0], stops[1], stops[2], stops[3], stops[1], stops[0]];
-	const segModes = orderedStops.slice(0, -1).map((s, i) => {
-		const dst = orderedStops[i + 1];
-		if ([s.id, dst.id].sort().join('-') === 'milan-paris') return 'highspeed';
-		const t = `${dst.transport.en} ${dst.transport.fr}`.toLowerCase();
-		return /ferry|boat|bateau/.test(t) ? 'boat' : 'train';
-	});
+	function dayLabel(i) {
+		const loc = $lang === 'fr' ? 'fr-FR' : 'en-GB';
+		return new Intl.DateTimeFormat(loc, { day: 'numeric', month: 'short' }).format(
+			new Date(startMs + i * DAY_MS)
+		);
+	}
 
 	$effect(() => {
 		// re-render labels when language changes
@@ -42,8 +59,6 @@
 			scrollWheelZoom: true,
 			zoomControl: false
 		}).setView([41.0, 12.5], 5);
-
-		L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			maxZoom: 19,
@@ -67,32 +82,14 @@
 		const all = [stops.map((s) => [s.lat, s.lng]), photos.map((p) => [p.lat, p.lng])].flat();
 		map.fitBounds(L.latLngBounds(all).pad(0.15), { maxZoom: 9 });
 
-		travelIcons = {
-			highspeed: L.divIcon({
-				className: 'travel-icon',
-				html: '<span class="ti">🚄</span>',
-				iconSize: [36, 36],
-				iconAnchor: [18, 18]
-			}),
-			train: L.divIcon({
-				className: 'travel-icon',
-				html: '<span class="ti">🚆</span>',
-				iconSize: [36, 36],
-				iconAnchor: [18, 18]
-			}),
-			boat: L.divIcon({
-				className: 'travel-icon',
-				html: '<span class="ti">⛴️</span>',
-				iconSize: [36, 36],
-				iconAnchor: [18, 18]
-			})
-		};
-
 		travelMarker = L.marker([0, 0], {
-			icon: travelIcons.train,
+			icon: iconFor('🚆'),
 			interactive: false,
 			zIndexOffset: 500
 		}).addTo(map);
+
+		const start = resolveAt(0);
+		simText = formatSim(start.date);
 		rafId = requestAnimationFrame(tick);
 
 		const focus = Number(page.url.searchParams.get('focus'));
@@ -108,60 +105,144 @@
 		};
 	});
 
-	function pointAtProgress(pts, t, zoom) {
-		const lens = [];
-		let total = 0;
-		for (let i = 0; i < pts.length - 1; i++) {
-			const d = pts[i].distanceTo(pts[i + 1]);
-			lens.push(d);
-			total += d;
+	function iconFor(emoji) {
+		let ic = iconCache[emoji];
+		if (!ic) {
+			ic = L.divIcon({
+				className: 'travel-icon',
+				html: `<span class="ti">${emoji}</span>`,
+				iconSize: [36, 36],
+				iconAnchor: [18, 18]
+			});
+			iconCache[emoji] = ic;
 		}
-		if (!total) return { latlng: pts[0], seg: 0 };
-		let target = ((t % 1) + 1) % 1 * total;
-		for (let i = 0; i < lens.length; i++) {
-			if (target <= lens[i] || i === lens.length - 1) {
-				const f = lens[i] === 0 ? 0 : target / lens[i];
-				const p = pts[i].multiplyBy(1 - f).add(pts[i + 1].multiplyBy(f));
-				return { latlng: map.unproject(p, zoom), seg: i };
-			}
-			target -= lens[i];
+		return ic;
+	}
+
+	function checkerIcon() {
+		const svg = `<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="ck" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="#1c1c1e"/><rect width="4" height="4" fill="#ffffff"/><rect x="4" y="4" width="4" height="4" fill="#ffffff"/></pattern></defs><circle cx="12" cy="12" r="10" fill="url(#ck)" stroke="#ffffff" stroke-width="3"/></svg>`;
+		return L.divIcon({
+			className: 'se-icon',
+			html: svg,
+			iconSize: [24, 24],
+			iconAnchor: [12, 12]
+		});
+	}
+
+	function formatSim(date) {
+		const loc = $lang === 'fr' ? 'fr-FR' : 'en-GB';
+		const d = new Intl.DateTimeFormat(loc, {
+			weekday: 'long',
+			day: 'numeric',
+			month: 'long'
+		}).format(date);
+		const h = String(date.getHours()).padStart(2, '0');
+		return `${d} — ${h}${$lang === 'fr' ? 'h' : ''}`;
+	}
+
+	function applyFrac() {
+		const { lat, lng, icon, date } = resolveAt(frac);
+		progPct = frac * 100;
+		dayIndex = Math.min(dayCount - 1, Math.max(0, Math.round(frac * (dayCount - 1))));
+		travelMarker.setLatLng([lat, lng]);
+		if (icon !== curIcon) {
+			curIcon = icon;
+			travelMarker.setIcon(iconFor(icon));
 		}
-		return { latlng: pts[pts.length - 1], seg: lens.length - 1 };
+		simText = formatSim(date);
 	}
 
 	function tick(now) {
 		if (!map || !travelMarker) return;
 		if (!lastNow) lastNow = now;
+		if (paused || dragging) {
+			lastNow = now;
+			rafId = requestAnimationFrame(tick);
+			return;
+		}
 		const dt = Math.min((now - lastNow) / 1000, 0.1);
 		lastNow = now;
-		const zoom = map.getZoom();
-		const pts = route.map(([lat, lng]) => map.project([lat, lng], zoom));
-		let total = 0;
-		for (let i = 0; i < pts.length - 1; i++) total += pts[i].distanceTo(pts[i + 1]);
-		if (total > 0) frac = (frac + (SPEED_PX * dt) / total) % 1;
-		const { latlng, seg } = pointAtProgress(pts, frac, zoom);
-		travelMarker.setLatLng(latlng);
-		if (seg !== curSeg) {
-			curSeg = seg;
-			travelMarker.setIcon(travelIcons[segModes[seg] || 'train']);
-		}
+		frac = (frac + dt / animationSecondsAt(speed)) % 1;
+		applyFrac();
 		rafId = requestAnimationFrame(tick);
+	}
+
+	function scrubAt(clientX) {
+		if (!trackEl) return;
+		const rect = trackEl.getBoundingClientRect();
+		frac = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+		applyFrac();
+	}
+
+	function onTrackDown(e) {
+		dragging = true;
+		trackEl.setPointerCapture(e.pointerId);
+		scrubAt(e.clientX);
+	}
+
+	function onTrackMove(e) {
+		if (dragging) scrubAt(e.clientX);
+	}
+
+	function onTrackUp() {
+		dragging = false;
+	}
+
+	function onTrackKey(e) {
+		if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+			e.preventDefault();
+			jumpToDay(Math.min(dayCount - 1, dayIndex + 1));
+		} else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+			e.preventDefault();
+			jumpToDay(Math.max(0, dayIndex - 1));
+		} else if (e.key === 'Home') {
+			e.preventDefault();
+			jumpToDay(0);
+		} else if (e.key === 'End') {
+			e.preventDefault();
+			jumpToDay(dayCount - 1);
+		}
+	}
+
+	function cycleSpeed() {
+		const i = SPEED_OPTIONS.indexOf(speed);
+		speed = SPEED_OPTIONS[(i + 1) % SPEED_OPTIONS.length];
+	}
+
+	function togglePause() {
+		paused = !paused;
+	}
+
+	function jumpToDay(i) {
+		frac = Math.min(1, (i * DAY_MS) / totalMs);
+		applyFrac();
 	}
 
 	function redraw() {
 		layerGroup.clearLayers();
 		photoMarkers = [];
 
+		const first = route[0];
+		const last = route[route.length - 1];
+		const isEnd = (s) =>
+			(s.lat === first[0] && s.lng === first[1]) || (s.lat === last[0] && s.lng === last[1]);
+
 		for (const s of stops) {
-			L.circleMarker([s.lat, s.lng], {
-				radius: 10,
-				color: '#fff',
-				weight: 3,
-				fillColor: '#1c1c1e',
-				fillOpacity: 1
-			})
-				.addTo(layerGroup)
-				.bindPopup(stopHtml(s));
+			if (isEnd(s)) {
+				L.marker([s.lat, s.lng], { icon: checkerIcon() })
+					.addTo(layerGroup)
+					.bindPopup(stopHtml(s));
+			} else {
+				L.circleMarker([s.lat, s.lng], {
+					radius: 10,
+					color: '#fff',
+					weight: 3,
+					fillColor: '#1c1c1e',
+					fillOpacity: 1
+				})
+					.addTo(layerGroup)
+					.bindPopup(stopHtml(s));
+			}
 		}
 
 		for (const p of photos) {
@@ -218,7 +299,72 @@
 	{/if}
 	<div id="map"></div>
 
-	<div class="panel" class:hidden={!panelOpen}>
+	<div class="sim">
+		<div class="sim-top">
+			<div class="sim-date">{simText}</div>
+			<div class="sim-ctls">
+				<button
+					class="sim-ctl-btn"
+					onclick={togglePause}
+					title={paused ? $dict.map.resume : $dict.map.pause}
+					aria-label={paused ? $dict.map.resume : $dict.map.pause}
+				>{paused ? '▶︎' : '⏸︎'}</button>
+				<button
+					class="sim-ctl-btn"
+					onclick={cycleSpeed}
+					title={`${$dict.map.speed}: ${speed}×`}
+					aria-label={`${$dict.map.speed}: ${speed}×`}
+				>{speed}×</button>
+			</div>
+		</div>
+		<div class="journey">
+			<div
+				class="journey-track"
+				bind:this={trackEl}
+				role="slider"
+				tabindex="0"
+				aria-label={$dict.map.journey}
+				aria-valuemin="0"
+				aria-valuemax={dayCount - 1}
+				aria-valuenow={dayIndex}
+				aria-valuetext={dayLabel(dayIndex)}
+				onpointerdown={onTrackDown}
+				onpointermove={onTrackMove}
+				onpointerup={onTrackUp}
+				onpointercancel={onTrackUp}
+				onlostpointercapture={onTrackUp}
+				onkeydown={onTrackKey}
+			>
+				<div
+					class="journey-line"
+					style="background: linear-gradient(to right, #b4552d {progPct}%, #e2d7bd {progPct}%)"
+				></div>
+				{#each dayIndices as _, i (i)}
+					<span
+						class="journey-tick"
+						class:active={i === dayIndex}
+						class:done={i < dayIndex}
+						style="left: {i / (dayCount - 1) * 100}%"
+					></span>
+				{/each}
+			</div>
+		</div>
+	</div>
+
+	<div
+		class="panel"
+		class:hidden={!panelOpen}
+		role="button"
+		tabindex="0"
+		aria-label={$dict.map.stops}
+		onclick={() => (panelOpen = false)}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				panelOpen = false;
+			}
+		}}
+	>
 		<button class="close" onclick={() => (panelOpen = false)} aria-label="Close">×</button>
 		<h1>{$dict.title}</h1>
 		<p>{$dict.subtitle}</p>
@@ -245,6 +391,11 @@
 	}
 
 	:global(.travel-icon) {
+		background: none;
+		border: none;
+	}
+
+	:global(.se-icon) {
 		background: none;
 		border: none;
 	}
@@ -351,6 +502,123 @@
 		color: #3b3126;
 	}
 
+	.sim {
+		position: absolute;
+		bottom: 16px;
+		left: 16px;
+		transform: none;
+		z-index: 1000;
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+		background: #fffdf6;
+		border: 2px solid #a08d6e;
+		border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+		padding: 8px 14px;
+		box-shadow: 0 4px 18px rgba(80, 62, 30, 0.22);
+		width: min(460px, calc(100vw - 32px));
+	}
+
+	.sim-top {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 10px;
+	}
+
+	.sim-date {
+		font-family: 'Short Stack', cursive;
+		font-size: 0.85rem;
+		color: #3b3126;
+		white-space: nowrap;
+		width: 15em;
+		text-align: left;
+	}
+
+	.sim-ctls {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+	}
+
+	.sim-ctl-btn {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border: 2px solid #a08d6e;
+		background: transparent;
+		color: #6b5f4a;
+		border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+		min-width: 30px;
+		height: 24px;
+		padding: 0 8px;
+		font-size: 0.8rem;
+		line-height: 1;
+		font-family: 'Short Stack', cursive;
+		cursor: pointer;
+		touch-action: manipulation;
+		white-space: nowrap;
+	}
+
+	.sim-ctl-btn:active {
+		background: #e8a33d;
+		color: #2c2417;
+		border-color: #e8a33d;
+	}
+
+	.journey {
+		display: block;
+	}
+
+	.journey-track {
+		position: relative;
+		height: 24px;
+		touch-action: none;
+		cursor: pointer;
+		outline: none;
+	}
+
+	.journey-track:focus-visible {
+		border-radius: 6px;
+		box-shadow: 0 0 0 2px #b4552d;
+	}
+
+	.journey-line {
+		position: absolute;
+		top: 50%;
+		transform: translateY(-50%);
+		left: 0;
+		right: 0;
+		height: 4px;
+		border-radius: 2px;
+		background: #e2d7bd;
+	}
+
+	.journey-tick {
+		position: absolute;
+		top: 50%;
+		transform: translate(-50%, -50%);
+		width: 9px;
+		height: 9px;
+		padding: 0;
+		border-radius: 50%;
+		border: 1.5px solid #cbb89a;
+		background: #fffdf6;
+		pointer-events: none;
+	}
+
+	.journey-tick.done {
+		background: #d9cbb0;
+		border-color: #d9cbb0;
+	}
+
+	.journey-tick.active {
+		background: #e8a33d;
+		border-color: #3b3126;
+		width: 11px;
+		height: 11px;
+	}
+
 	:global(.leaflet-popup-content-wrapper) {
 		background: #fffdf6;
 		border: 2px solid #a08d6e;
@@ -392,6 +660,30 @@
 			right: 12px;
 			top: 12px;
 			max-width: none;
+		}
+
+		.sim {
+			width: calc(100vw - 88px);
+			padding: 7px 10px;
+			gap: 6px;
+		}
+
+		.sim-top {
+			gap: 6px;
+		}
+
+		.sim-date {
+			font-size: 0.72rem;
+		}
+
+		.journey-tick {
+			width: 8px;
+			height: 8px;
+		}
+
+		.journey-tick.active {
+			width: 10px;
+			height: 10px;
 		}
 
 		.reopen {

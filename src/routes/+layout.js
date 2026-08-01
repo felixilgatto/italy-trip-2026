@@ -1,3 +1,3 @@
-export function load({ url }) {
-	return { lang: url.searchParams.get('lang') === 'en' ? 'en' : 'fr' };
+export function load({ data, url }) {
+	return { ...data, lang: url.searchParams.get('lang') === 'en' ? 'en' : 'fr' };
 }

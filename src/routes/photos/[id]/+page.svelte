@@ -15,6 +15,7 @@
 	let msg = $state('');
 	let err = $state('');
 	let deleting = $state(false);
+	let fullscreen = $state(false);
 
 	const p = $derived(photo);
 
@@ -22,6 +23,21 @@
 	const date = $derived(
 		p.taken_at ? new Date(p.taken_at).toLocaleDateString($lang === 'fr' ? 'fr-FR' : 'en-GB') : ''
 	);
+
+	onMount(() => {
+		const onKey = (e) => {
+			if (e.key === 'Escape') fullscreen = false;
+		};
+		window.addEventListener('keydown', onKey);
+		return () => window.removeEventListener('keydown', onKey);
+	});
+
+	$effect(() => {
+		document.body.style.overflow = fullscreen ? 'hidden' : '';
+		return () => {
+			document.body.style.overflow = '';
+		};
+	});
 
 	onMount(async () => {
 		try {
@@ -75,7 +91,15 @@
 	</nav>
 
 	<figure>
-		<img src={`/photos/${p.id}/file?v=${encodeURIComponent(p.filename)}`} alt={caption} />
+		<button
+			class="zoom"
+			type="button"
+			title={$dict.photo.zoom}
+			aria-label={$dict.photo.zoom}
+			onclick={() => (fullscreen = true)}
+		>
+			<img src={`/photos/${p.id}/file?v=${encodeURIComponent(p.filename)}`} alt={caption} />
+		</button>
 		<figcaption>
 			{#if editing}
 				<label>
@@ -111,6 +135,30 @@
 		</figcaption>
 	</figure>
 </div>
+
+{#if fullscreen}
+	<div
+		class="lightbox"
+		role="dialog"
+		aria-modal="true"
+		aria-label={caption}
+		tabindex="0"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) fullscreen = false;
+		}}
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				fullscreen = false;
+			}
+		}}
+	>
+		<img src={`/photos/${p.id}/file?v=${encodeURIComponent(p.filename)}`} alt={caption} />
+		<button class="lb-close" onclick={() => (fullscreen = false)} aria-label={$dict.photo.back}>
+			×
+		</button>
+	</div>
+{/if}
 
 <style>
 	.page {
@@ -154,7 +202,16 @@
 		transform: rotate(-0.6deg);
 	}
 
-	figure img {
+	.zoom {
+		display: block;
+		width: 100%;
+		padding: 0;
+		border: 0;
+		background: none;
+		cursor: zoom-in;
+	}
+
+	.zoom img {
 		width: 100%;
 		max-height: 74vh;
 		object-fit: contain;
@@ -259,5 +316,44 @@
 	.err {
 		color: #b4552d;
 		margin: 0;
+	}
+
+	.lightbox {
+		position: fixed;
+		inset: 0;
+		z-index: 5000;
+		background: rgba(30, 24, 16, 0.92);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 24px;
+		cursor: zoom-out;
+	}
+
+	.lightbox img {
+		max-width: 100%;
+		max-height: 100%;
+		object-fit: contain;
+		border-radius: 4px;
+		box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+	}
+
+	.lb-close {
+		position: absolute;
+		top: 16px;
+		right: 20px;
+		background: none;
+		border: 2px solid #f5e9cf;
+		color: #f5e9cf;
+		font-size: 1.6rem;
+		line-height: 1;
+		padding: 2px 13px;
+		border-radius: 50%;
+		cursor: pointer;
+		z-index: 5001;
+	}
+
+	.lb-close:hover {
+		background: rgba(245, 233, 207, 0.15);
 	}
 </style>

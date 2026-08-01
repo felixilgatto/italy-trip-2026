@@ -11,6 +11,7 @@
 
 	const lang = $derived(data.lang === 'en' ? 'en' : 'fr');
 	const d = $derived(dicts[lang]);
+	const authed = $derived(data.authed);
 	const pathNoLang = $derived(page.url.pathname);
 	const t = (key) => d.nav[key] ?? key;
 	let menuOpen = $state(false);
@@ -40,8 +41,14 @@
 		<div class="links">
 			<a href="/?lang={lang}">{t('home')}</a>
 			<a href="/photos?lang={lang}">{t('photos')}</a>
-			<a href="/upload?lang={lang}">{t('upload')}</a>
 		</div>
+		{#if authed}
+			<a
+				class="admin"
+				href="/upload?lang={lang}"
+				title={t('upload')}
+				aria-label={t('upload')}>＋</a>
+		{/if}
 		<div class="lang">
 			<a class:active={lang === 'en'} href={langHref('en')}>EN</a>
 			<a class:active={lang === 'fr'} href={langHref('fr')}>FR</a>
@@ -61,7 +68,12 @@
 		<div class="mobile-menu">
 			<a href="/?lang={lang}" onclick={() => (menuOpen = false)}>{t('home')}</a>
 			<a href="/photos?lang={lang}" onclick={() => (menuOpen = false)}>{t('photos')}</a>
-			<a href="/upload?lang={lang}" onclick={() => (menuOpen = false)}>{t('upload')}</a>
+			{#if authed}
+				<a
+					class="admin-mobile"
+					href="/upload?lang={lang}"
+					onclick={() => (menuOpen = false)}>＋ {t('upload')}</a>
+			{/if}
 		</div>
 	{/if}
 </header>
@@ -142,6 +154,24 @@
 		border: 1px solid #5c4f3d;
 		border-radius: 6px;
 		overflow: hidden;
+	}
+
+	.admin {
+		color: #8a7a5f;
+		text-decoration: none;
+		font-size: 1.15rem;
+		line-height: 1;
+		padding: 1px 8px;
+		border: 1.5px solid #5c4f3d;
+		border-radius: 50%;
+		opacity: 0.7;
+		transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.admin:hover {
+		opacity: 1;
+		color: #e8a33d;
+		border-color: #e8a33d;
 	}
 
 	.lang a {
@@ -229,6 +259,18 @@
 
 		.mobile-menu a:hover {
 			color: #fff;
+			background: #4a3f31;
+		}
+
+		.mobile-menu a.admin-mobile {
+			font-size: 0.9rem;
+			color: #8a7a5f;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+
+		.mobile-menu a.admin-mobile:hover {
+			color: #e8a33d;
 			background: #4a3f31;
 		}
 	}
