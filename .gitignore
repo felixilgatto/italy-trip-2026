@@ -24,3 +24,4 @@ vite.config.ts.timestamp-*
 
 # Local data (SQLite + uploaded photos)
 /data
+planning.csv

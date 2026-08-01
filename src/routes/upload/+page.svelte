@@ -13,6 +13,8 @@
 	let batchLat = $state(null);
 	let batchLng = $state(null);
 	let geoMsg = $state('');
+	let geoBusy = $state(false);
+	let manualLoc = $state(false);
 	let uploading = $state(false);
 	let uploadMsg = $state('');
 	let uploadErr = $state('');
@@ -63,10 +65,11 @@
 		});
 	}
 
-	function setCoords({ lat, lng }) {
+	function setCoords({ lat, lng }, manual = true) {
 		batchLat = lat;
 		batchLng = lng;
 		geoMsg = '';
+		if (manual) manualLoc = true;
 	}
 
 	async function login() {
@@ -103,7 +106,8 @@
 		uploadErr = '';
 		batchLat = null;
 		batchLng = null;
-		geoMsg = '';
+		geoBusy = true;
+		geoMsg = $dict.upload.geoBusy;
 
 		const added = [];
 		for (const file of selected) {
@@ -118,28 +122,42 @@
 		}
 		files = [...files, ...added];
 
-		let gpsFound = null;
-		for (const entry of added) {
-			try {
-				const [gps, meta] = await Promise.all([
-					exifr.gps(entry.file),
-					exifr.parse(entry.file, ['DateTimeOriginal']).catch(() => null)
-				]);
-				if (gps && typeof gps.latitude === 'number' && typeof gps.longitude === 'number') {
-					entry.geo = { lat: gps.latitude, lng: gps.longitude };
-					if (!gpsFound) gpsFound = entry.geo;
+		const parsed = await Promise.all(
+			added.map(async (entry) => {
+				try {
+					const [gps, meta] = await Promise.all([
+						exifr.gps(entry.file),
+						exifr.parse(entry.file, ['DateTimeOriginal']).catch(() => null)
+					]);
+					return {
+						geo:
+							gps && typeof gps.latitude === 'number' && typeof gps.longitude === 'number'
+								? { lat: gps.latitude, lng: gps.longitude }
+								: null,
+						taken_at: meta?.DateTimeOriginal || ''
+					};
+				} catch {
+					return { geo: null, taken_at: '' };
 				}
-				if (meta?.DateTimeOriginal) entry.taken_at = meta.DateTimeOriginal;
-			} catch {
-				// ignore
-			}
-		}
+			})
+		);
 
-		if (gpsFound) {
+		parsed.forEach((r, i) => {
+			added[i].geo = r.geo;
+			if (r.taken_at) added[i].taken_at = r.taken_at;
+		});
+
+		const gpsFound = parsed.find((r) => r.geo)?.geo || null;
+
+		geoBusy = false;
+
+		if (gpsFound && !manualLoc) {
 			marker?.setLatLng([gpsFound.lat, gpsFound.lng]);
 			map?.setView([gpsFound.lat, gpsFound.lng], 12);
-			setCoords(gpsFound);
+			setCoords(gpsFound, false);
 			geoMsg = $dict.upload.geoDetected;
+		} else if (gpsFound) {
+			geoMsg = $dict.upload.geoManual;
 		} else {
 			geoMsg = $dict.upload.geoMissing;
 		}
@@ -157,6 +175,10 @@
 
 	async function submit() {
 		if (!files.length) return;
+		if (geoBusy) {
+			uploadErr = $dict.upload.geoBusy;
+			return;
+		}
 		if (batchLat === null || batchLng === null) {
 			uploadErr = $dict.upload.geoMissing;
 			return;
@@ -278,7 +300,7 @@
 
 		{#if uploadMsg}<p class="ok">{uploadMsg}</p>{/if}
 		{#if uploadErr}<p class="err">{uploadErr}</p>{/if}
-		<button onclick={submit} disabled={uploading || !files.length}>
+		<button onclick={submit} disabled={uploading || !files.length || geoBusy}>
 			{uploading ? $dict.upload.uploading : $dict.upload.submit}
 		</button>
 	</section>

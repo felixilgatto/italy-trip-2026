@@ -1,12 +1,22 @@
 export default {
 	nav: { home: 'Carte', photos: 'Photos', upload: 'Ajouter des photos' },
 	title: 'Italie 2026',
-	subtitle: 'Un trip backpacking à travers l’Italie — suis le parcours et les photos.',
-	map: { stops: 'Étapes', photos: 'Photos', route: 'Parcours', lang: 'Langue' },
+	subtitle: 'Coucou, moi c’est Félix ! Voici mon trip backpacking à travers l’Italie — suis le parcours et les photos.',
+	map: {
+		stops: 'Étapes',
+		photos: 'Photos',
+		route: 'Parcours',
+		lang: 'Langue',
+		speed: 'Vitesse',
+		pause: 'Pause',
+		resume: 'Reprendre',
+		journey: 'Étapes du voyage',
+		stay: 'Séjour'
+	},
 	stop: { transport: 'Transport', stay: 'Logement' },
 	photos: {
 		title: 'Photos',
-		empty: 'Pas encore de photos — va dans « Ajouter des photos » pour publier les premières.',
+		empty: 'Pas encore de photos — reviens bientôt, le voyage commence !',
 		delete: 'Supprimer',
 		deleteConfirm: 'Supprimer cette photo ?',
 		deleted: 'Photo supprimée'
@@ -19,7 +29,8 @@ export default {
 		saved: 'Légende enregistrée',
 		delete: 'Supprimer la photo',
 		notFound: 'Photo introuvable',
-		onMap: 'Ouvrir sur la carte'
+		onMap: 'Ouvrir sur la carte',
+		zoom: 'Plein écran'
 	},
 	upload: {
 		title: 'Ajouter des photos',
@@ -35,6 +46,8 @@ export default {
 		captionFr: 'Légende (FR)',
 		geoDetected: 'GPS trouvé dans les photos — ajuste le marqueur si besoin.',
 		geoMissing: 'Pas de GPS dans ces photos — place le marqueur sur la carte.',
+		geoBusy: 'Localisation des photos en cours…',
+		geoManual: 'GPS trouvé, mais tu as déjà placé le marqueur — sa position est conservée.',
 		clickToPlace: 'Clique sur la carte pour placer le marqueur, ou déplace-le.',
 		dragMarker: 'Déplace le marqueur sur la carte',
 		selectedCount: '{n} photos sélectionnées',

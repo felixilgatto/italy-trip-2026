@@ -11,8 +11,10 @@
 
 	const lang = $derived(data.lang === 'en' ? 'en' : 'fr');
 	const d = $derived(dicts[lang]);
+	const authed = $derived(data.authed);
 	const pathNoLang = $derived(page.url.pathname);
 	const t = (key) => d.nav[key] ?? key;
+	let menuOpen = $state(false);
 
 	const langHref = (l) => {
 		const qs = new URLSearchParams(page.url.searchParams);
@@ -39,13 +41,41 @@
 		<div class="links">
 			<a href="/?lang={lang}">{t('home')}</a>
 			<a href="/photos?lang={lang}">{t('photos')}</a>
-			<a href="/upload?lang={lang}">{t('upload')}</a>
 		</div>
+		{#if authed}
+			<a
+				class="admin"
+				href="/upload?lang={lang}"
+				title={t('upload')}
+				aria-label={t('upload')}>＋</a>
+		{/if}
 		<div class="lang">
 			<a class:active={lang === 'en'} href={langHref('en')}>EN</a>
 			<a class:active={lang === 'fr'} href={langHref('fr')}>FR</a>
 		</div>
+		<button
+			class="burger"
+			class:open={menuOpen}
+			onclick={() => (menuOpen = !menuOpen)}
+			aria-label="Menu"
+			aria-expanded={menuOpen}
+		>
+			☰
+		</button>
 	</nav>
+
+	{#if menuOpen}
+		<div class="mobile-menu">
+			<a href="/?lang={lang}" onclick={() => (menuOpen = false)}>{t('home')}</a>
+			<a href="/photos?lang={lang}" onclick={() => (menuOpen = false)}>{t('photos')}</a>
+			{#if authed}
+				<a
+					class="admin-mobile"
+					href="/upload?lang={lang}"
+					onclick={() => (menuOpen = false)}>＋ {t('upload')}</a>
+			{/if}
+		</div>
+	{/if}
 </header>
 
 <main>
@@ -73,7 +103,7 @@
 	header {
 		position: sticky;
 		top: 0;
-		z-index: 1000;
+		z-index: 1200;
 		background: #3b3126;
 		color: #fff;
 		height: 48px;
@@ -126,6 +156,24 @@
 		overflow: hidden;
 	}
 
+	.admin {
+		color: #8a7a5f;
+		text-decoration: none;
+		font-size: 1.15rem;
+		line-height: 1;
+		padding: 1px 8px;
+		border: 1.5px solid #5c4f3d;
+		border-radius: 50%;
+		opacity: 0.7;
+		transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+	}
+
+	.admin:hover {
+		opacity: 1;
+		color: #e8a33d;
+		border-color: #e8a33d;
+	}
+
 	.lang a {
 		display: block;
 		padding: 5px 12px;
@@ -139,6 +187,92 @@
 		background: #e8a33d;
 		color: #2c2417;
 		font-weight: 600;
+	}
+
+	.burger {
+		display: none;
+		margin-left: auto;
+		background: none;
+		border: none;
+		color: #f5e9cf;
+		font-size: 1.6rem;
+		line-height: 1;
+		cursor: pointer;
+		padding: 4px 6px;
+		border-radius: 6px;
+		touch-action: manipulation;
+	}
+
+	.burger:hover {
+		background: rgba(255, 255, 255, 0.08);
+	}
+
+	.burger.open {
+		color: #e8a33d;
+	}
+
+	.mobile-menu {
+		display: none;
+	}
+
+	@media (max-width: 640px) {
+		nav {
+			gap: 12px;
+			padding: 0 12px;
+		}
+
+		.brand {
+			font-size: 1.35rem;
+		}
+
+		.links {
+			display: none;
+		}
+
+		.burger {
+			display: block;
+		}
+
+		.mobile-menu {
+			display: flex;
+			flex-direction: column;
+			position: absolute;
+			top: 100%;
+			left: 0;
+			right: 0;
+			z-index: 999;
+			background: #3b3126;
+			border-bottom: 4px dashed #e8dcc0;
+			box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+		}
+
+		.mobile-menu a {
+			display: block;
+			color: #d9cbb0;
+			text-decoration: none;
+			font-family: 'Short Stack', cursive;
+			font-size: 1.05rem;
+			padding: 15px 20px;
+			border-top: 1px dashed #5c4f3d;
+			touch-action: manipulation;
+		}
+
+		.mobile-menu a:hover {
+			color: #fff;
+			background: #4a3f31;
+		}
+
+		.mobile-menu a.admin-mobile {
+			font-size: 0.9rem;
+			color: #8a7a5f;
+			padding-top: 10px;
+			padding-bottom: 10px;
+		}
+
+		.mobile-menu a.admin-mobile:hover {
+			color: #e8a33d;
+			background: #4a3f31;
+		}
 	}
 
 	:global(button),
