@@ -102,6 +102,7 @@
 		return () => {
 			if (rafId) cancelAnimationFrame(rafId);
 			if (travelMarker) travelMarker.remove();
+			if (map) map.remove();
 		};
 	});
 
@@ -234,13 +235,9 @@
 		const now = new Date();
 		const msSinceStart = now.getTime() - startMs;
 		frac = Math.min(1, Math.max(0, msSinceStart / totalMs));
-		paused = false;
 		applyFrac();
-		if (rafId) {
-			cancelAnimationFrame(rafId);
-			rafId = null;
-		}
-		startLoop();
+		paused = true;
+		stopLoop();
 	}
 
 	function redraw() {

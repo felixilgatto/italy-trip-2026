@@ -18,8 +18,8 @@ ENV NODE_ENV=production \
     DATA_DIR=/data \
     BODY_SIZE_LIMIT=30M
 COPY --from=build /app/build build
-COPY --from=build /app/node_modules node_modules
-COPY --from=build /app/package.json package.json
+COPY --from=build /app/package.json /app/package-lock.json ./
+RUN npm ci --omit=dev
 RUN mkdir -p /data/photos
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \

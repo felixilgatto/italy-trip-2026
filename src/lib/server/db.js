@@ -36,9 +36,11 @@ export function getPhoto(id) {
 }
 
 export function updatePhoto(id, { caption_en, caption_fr }) {
+	const existing = getPhoto(id);
+	if (!existing) return null;
 	db.prepare('UPDATE photos SET caption_en = ?, caption_fr = ? WHERE id = ?').run(
-		caption_en || '',
-		caption_fr || '',
+		caption_en ?? existing.caption_en,
+		caption_fr ?? existing.caption_fr,
 		id
 	);
 	return getPhoto(id);
