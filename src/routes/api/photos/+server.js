@@ -13,6 +13,17 @@ fs.mkdirSync(TMP_DIR, { recursive: true });
 
 const MAX_MB = 25;
 const MAX_BYTES = MAX_MB * 1024 * 1024;
+const SAFE_IMAGE_EXT = new Set([
+	'.jpg',
+	'.jpeg',
+	'.png',
+	'.webp',
+	'.gif',
+	'.avif',
+	'.heic',
+	'.heif',
+	'.tiff'
+]);
 
 /** Write a web ReadableStream to disk, rejecting on error. */
 function writeStream(readable, filePath) {
@@ -75,9 +86,9 @@ export async function POST({ request, cookies }) {
 			mime = 'image/jpeg';
 		} else {
 			// Not a processable image — store raw bytes as-is (no thumbnail).
-			// Never trust the client MIME type: constrain it to safe image types so
-			// stored files can't be served as HTML/JS from our origin.
-			const ext = path.extname(file.name || '.jpg') || '.jpg';
+			// Never trust the client MIME type or filename extension.
+			const rawExt = path.extname(path.basename(file.name || '.bin')).toLowerCase() || '.bin';
+			const ext = SAFE_IMAGE_EXT.has(rawExt) ? rawExt : '.bin';
 			filename = `${base}${ext}`;
 			mime = SAFE_IMAGE_MIME.has(file.type) ? file.type : 'application/octet-stream';
 			fs.copyFileSync(tmpPath, path.join(DATA_DIR, 'photos', filename));

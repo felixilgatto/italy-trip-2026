@@ -6,7 +6,7 @@
 	let { data } = $props();
 	// svelte-ignore state_referenced_locally
 	let photo = $state.raw(data.photo);
-	let authed = $state(false);
+	let authed = $state(data.authed || false);
 	let editing = $state(false);
 	// svelte-ignore state_referenced_locally
 	let caption_en = $state(photo.caption_en || '');
@@ -32,6 +32,18 @@
 		return () => window.removeEventListener('keydown', onKey);
 	});
 
+	onMount(async () => {
+		try {
+			const res = await fetch('/api/auth/status');
+			if (res.ok) {
+				const json = await res.json();
+				authed = json.authed;
+			}
+		} catch {
+			// ignore network failures
+		}
+	});
+
 	$effect(() => {
 		document.body.style.overflow = fullscreen ? 'hidden' : '';
 		return () => {
@@ -39,14 +51,6 @@
 		};
 	});
 
-	onMount(async () => {
-		try {
-			const res = await fetch('/api/auth/status');
-			if (res.ok) authed = (await res.json()).authed;
-		} catch {
-			// offline
-		}
-	});
 
 	async function save() {
 		err = '';

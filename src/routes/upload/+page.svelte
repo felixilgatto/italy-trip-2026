@@ -4,7 +4,8 @@
 	import exifr from 'exifr';
 	import { lang, dict } from '$lib/i18n/index.js';
 
-	let authed = $state(false);
+	let { data } = $props();
+	let authed = $state(data.authed || false);
 	let password = $state('');
 	let loginError = $state('');
 	let logginIn = $state(false);
@@ -28,15 +29,6 @@
 
 	onMount(async () => {
 		L = (await import('leaflet')).default;
-		try {
-			const res = await fetch('/api/auth/status');
-			if (res.ok) {
-				const data = await res.json();
-				authed = data.authed;
-			}
-		} catch {
-			// offline
-		}
 	});
 
 	$effect(() => {

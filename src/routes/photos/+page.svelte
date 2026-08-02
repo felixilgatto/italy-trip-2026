@@ -3,17 +3,20 @@
 	import { lang, dict } from '$lib/i18n/index.js';
 
 	let { data } = $props();
-	let authed = $state(false);
+	let authed = $state(data.authed || false);
 	let msg = $state('');
 	// svelte-ignore state_referenced_locally
-	let photos = $state.raw(data.photos);
+	let photos = $state.raw(data.photos || []);
 
 	onMount(async () => {
 		try {
 			const res = await fetch('/api/auth/status');
-			if (res.ok) authed = (await res.json()).authed;
+			if (res.ok) {
+				const json = await res.json();
+				authed = json.authed;
+			}
 		} catch {
-			// offline
+			// ignore network failures
 		}
 	});
 
