@@ -23,7 +23,7 @@ Cloudflare (DNS + Tunnel)
 | Carte | **Leaflet + OpenStreetMap** | Gratuit, sans clé API |
 | Base de données | **SQLite** (better-sqlite3) | Fichier unique, zéro conteneur, super sur Pi |
 | Photos | Disque via **volume Docker** | Pas besoin d'object storage sur un Pi |
-| Géoloc photo | Extraction **EXIF GPS** (`exifr`) + fallback | Fallback = sélecteur manuel sur la carte |
+| Géoloc photo | Marker manuel sur la carte + bouton "Ma position" | L'utilisateur place le marker, pas de GPS EXIF |
 | Auth upload | **Mot de passe unique** (bcrypt + cookie signé) | Pas de comptes utilisateurs |
 | i18n | **`?lang=fr` / `?lang=en`** (défaut FR) | Langue dans l'URL, partageable |
 | Image Docker | `node:22-alpine` | ~100 MB, démarrage rapide sur Pi |
@@ -42,7 +42,7 @@ app/
 │   ├── lib/
 │   │   ├── server/db.js          # SQLite (better-sqlite3)
 │   │   ├── server/images.js      # sharp (reencode + thumbnails), MIME allowlist
-│   │   ├── server/exif.js        # extraction GPS EXIF
+│   │   ├── server/exif.js        # extraction date de prise de vue (EXIF)
 │   │   ├── server/auth.js        # bcrypt + session cookie signé
 │   │   ├── i18n/en.js, fr.js     # dictionnaires EN/FR
 │   │   └── data/stops.js         # stops depuis le CSV (coordonnées, dates)
@@ -61,7 +61,7 @@ app/
 ## Workflow
 
 1. **Visiteur** → `/` : carte interactive, tracé du parcours, photos en markers/popups. Langue via `?lang=fr` / `?lang=en` (défaut FR).
-2. **Toi** → `/upload` : mot de passe → upload → auto-géoloc EXIF → sinon drag du marker sur la carte → caption optionnelle → sauvegardé
+2. **Toi** → `/upload` : mot de passe → upload → placement du marker sur la carte (ou bouton "Ma position") → caption optionnelle → sauvegardé
 
 ## Déploiement Coolify
 

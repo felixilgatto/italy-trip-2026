@@ -195,7 +195,7 @@
 
 	function onTrackUp() {
 		dragging = false;
-		startLoop();
+		if (!paused) startLoop();
 	}
 
 	function onTrackKey(e) {
@@ -393,8 +393,9 @@
 <style>
 	.map-wrap {
 		position: relative;
-		height: calc(100dvh - 48px);
 		height: calc(100vh - 48px);
+		height: calc(100vh - 48px - env(safe-area-inset-top, 0px));
+		height: calc(100dvh - 48px - env(safe-area-inset-top, 0px));
 	}
 
 	#map {
@@ -516,7 +517,7 @@
 
 	.sim {
 		position: absolute;
-		bottom: 16px;
+		bottom: calc(16px + env(safe-area-inset-bottom, 0px));
 		left: 16px;
 		transform: none;
 		z-index: 1000;

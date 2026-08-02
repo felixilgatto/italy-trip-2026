@@ -101,12 +101,15 @@
 	}
 
 	header {
+		--sait: env(safe-area-inset-top, 0px);
 		position: sticky;
 		top: 0;
 		z-index: 1200;
 		background: #3b3126;
 		color: #fff;
-		height: 48px;
+		height: calc(48px + var(--sait));
+		padding-top: var(--sait);
+		box-sizing: border-box;
 		border-bottom: 4px dashed #e8dcc0;
 	}
 

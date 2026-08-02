@@ -6,7 +6,7 @@ A bilingual (EN/FR) travel site for a backpacking trip across Italy: an interact
 
 - **Map** (`/`) — trip route with an animated train/ferry marker and geotagged photo markers with popups
 - **Gallery** (`/photos`) — captions in EN/FR, thumbnails, download and (when authed) delete
-- **Private upload** (`/upload`) — password auth, EXIF GPS auto-detection, manual map-marker fallback, per-file captions
+- **Private upload** (`/upload`) — password auth, manual map-marker placement with a geolocation button, per-file captions
 - **i18n** — `?lang=en` / `?lang=fr`, default FR, language preserved across links
 
 ## Tech stack
@@ -43,6 +43,7 @@ npm run preview
 | `UPLOAD_PASSWORD_HASH` | bcrypt hash of the upload password; takes precedence over `UPLOAD_PASSWORD`. |
 | `COOKIE_SECURE` | Set to `true` when behind HTTPS (e.g. Cloudflare). |
 | `DATA_DIR` | Where the SQLite DB and photos are stored (default `data`). |
+| `BODY_SIZE_LIMIT` | Max request body accepted by the server (default `512K`). Set to `30M` so photo uploads up to the 25 MB limit work. |
 
 ## Deployment
 
