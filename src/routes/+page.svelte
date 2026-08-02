@@ -230,6 +230,19 @@
 		applyFrac();
 	}
 
+	function jumpToLive() {
+		const now = new Date();
+		const msSinceStart = now.getTime() - startMs;
+		frac = Math.min(1, Math.max(0, msSinceStart / totalMs));
+		paused = false;
+		applyFrac();
+		if (rafId) {
+			cancelAnimationFrame(rafId);
+			rafId = null;
+		}
+		startLoop();
+	}
+
 	function redraw() {
 		layerGroup.clearLayers();
 		photoMarkers = [];
@@ -327,6 +340,9 @@
 					title={`${$dict.map.speed}: ${speed}×`}
 					aria-label={`${$dict.map.speed}: ${speed}×`}
 				>{speed}×</button>
+				<button class="sim-ctl-btn" onclick={jumpToLive} title={$dict.map.live} aria-label={$dict.map.live}>
+					{$dict.map.live}
+				</button>
 			</div>
 		</div>
 		<div class="journey">

@@ -11,7 +11,8 @@ export default {
 		pause: 'Pause',
 		resume: 'Resume',
 		journey: 'Journey steps',
-		stay: 'Stay'
+		stay: 'Stay',
+		live: 'Live'
 	},
 	stop: { transport: 'Transport', stay: 'Stay' },
 	photos: {

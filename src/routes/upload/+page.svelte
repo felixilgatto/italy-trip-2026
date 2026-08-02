@@ -29,10 +29,15 @@
 
 	onMount(async () => {
 		L = (await import('leaflet')).default;
+		return () => destroyMap();
 	});
 
 	$effect(() => {
-		if (authed && !map && L) initMap();
+		if (!authed) {
+			destroyMap();
+			return;
+		}
+		if (L && !map) initMap();
 	});
 
 	function pinIcon() {
@@ -45,7 +50,16 @@
 		});
 	}
 
+	function destroyMap() {
+		if (map) {
+			map.remove();
+			map = null;
+		}
+		marker = null;
+	}
+
 	function initMap() {
+		if (map || !L || !document.getElementById('upload-map')) return;
 		map = L.map('upload-map', { scrollWheelZoom: true }).setView([41.0, 13.5], 6);
 		L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 			maxZoom: 19,
@@ -57,6 +71,7 @@
 			marker.setLatLng(e.latlng);
 			setCoords(e.latlng);
 		});
+		requestAnimationFrame(() => map?.invalidateSize());
 	}
 
 	function setCoords({ lat, lng }) {
