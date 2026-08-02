@@ -22,8 +22,8 @@
 	let uploadMsg = $state('');
 	let uploadErr = $state('');
 
-	let L;
-	let map;
+	let L = $state(null);
+	let map = $state(null);
 	let marker;
 	let fileInput = $state(null);
 
